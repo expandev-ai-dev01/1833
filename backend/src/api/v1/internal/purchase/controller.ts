@@ -12,9 +12,9 @@ import {
   purchaseDelete,
   purchaseGet,
   purchaseList,
-  purchaseGetMonthlyTotal,
+  purchaseGetTotal,
 } from '@/services/purchase';
-import { zName, zPrice, zDate, zId } from '@/utils/zodValidation';
+import { zName, zQuantity, zPrice, zDate, zId, zCategory } from '@/utils/zodValidation';
 
 const securable = 'PURCHASE';
 
@@ -27,9 +27,10 @@ export async function createHandler(
 
   const bodySchema = z.object({
     name: zName,
-    price: zPrice,
+    quantity: zQuantity,
+    unitPrice: zPrice,
     purchaseDate: zDate,
-    category: z.string().optional().nullable(),
+    category: zCategory,
   });
 
   const [validated, error] = await operation.create(req, bodySchema);
@@ -57,9 +58,10 @@ export async function updateHandler(
   const paramsSchema = z.object({ id: zId });
   const bodySchema = z.object({
     name: zName,
-    price: zPrice,
+    quantity: zQuantity,
+    unitPrice: zPrice,
     purchaseDate: zDate,
-    category: z.string().optional().nullable(),
+    category: zCategory,
   });
 
   const [validated, error] = await operation.update(req, paramsSchema, bodySchema);
@@ -130,34 +132,11 @@ export async function getHandler(req: Request, res: Response, next: NextFunction
 export async function listHandler(req: Request, res: Response, next: NextFunction): Promise<void> {
   const operation = new CrudController([{ securable, permission: 'READ' }]);
 
-  const [validated, error] = await operation.list(req);
-
-  if (!validated) return next(error);
-
-  try {
-    const result = await purchaseList(validated.credential);
-    res.json(successResponse(result));
-  } catch (error: any) {
-    res.status(StatusGeneralError).json(errorResponse(error.message));
-  }
-}
-
-export async function getMonthlyTotalHandler(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  const operation = new CrudController([{ securable, permission: 'READ' }]);
-
-  // Default to current month/year if not provided
-  const now = new Date();
   const querySchema = z.object({
-    month: z.coerce
-      .number()
-      .min(1)
-      .max(12)
-      .default(now.getMonth() + 1),
-    year: z.coerce.number().min(2000).default(now.getFullYear()),
+    searchTerm: z.string().optional().nullable(),
+    startDate: z.coerce.date().optional().nullable(),
+    endDate: z.coerce.date().optional().nullable(),
+    category: z.string().optional().nullable(),
   });
 
   const [validated, error] = await operation.list(req, querySchema);
@@ -165,7 +144,36 @@ export async function getMonthlyTotalHandler(
   if (!validated) return next(error);
 
   try {
-    const result = await purchaseGetMonthlyTotal({
+    const result = await purchaseList({
+      ...validated.credential,
+      ...validated.params,
+    });
+    res.json(successResponse(result));
+  } catch (error: any) {
+    res.status(StatusGeneralError).json(errorResponse(error.message));
+  }
+}
+
+export async function getTotalHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const operation = new CrudController([{ securable, permission: 'READ' }]);
+
+  const querySchema = z.object({
+    searchTerm: z.string().optional().nullable(),
+    startDate: z.coerce.date().optional().nullable(),
+    endDate: z.coerce.date().optional().nullable(),
+    category: z.string().optional().nullable(),
+  });
+
+  const [validated, error] = await operation.list(req, querySchema);
+
+  if (!validated) return next(error);
+
+  try {
+    const result = await purchaseGetTotal({
       ...validated.credential,
       ...validated.params,
     });

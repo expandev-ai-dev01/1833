@@ -3,16 +3,23 @@ import {
   PurchaseCreateRequest,
   PurchaseUpdateRequest,
   PurchaseEntity,
-  MonthlyTotalRequest,
+  PurchaseListFilters,
+  PurchaseTotalRequest,
 } from './purchaseTypes';
 
 export async function purchaseCreate(params: PurchaseCreateRequest): Promise<{ id: number }> {
   const pool = await getPool();
+
+  // Calculate total price automatically (BR-001)
+  const totalPrice = Number((params.quantity * params.unitPrice).toFixed(2));
+
   const result = await pool
     .request()
     .input('idAccount', params.idAccount)
     .input('name', params.name)
-    .input('price', params.price)
+    .input('quantity', params.quantity)
+    .input('unitPrice', params.unitPrice)
+    .input('totalPrice', totalPrice)
     .input('purchaseDate', params.purchaseDate)
     .input('category', params.category || null)
     .execute('spPurchaseCreate');
@@ -22,12 +29,18 @@ export async function purchaseCreate(params: PurchaseCreateRequest): Promise<{ i
 
 export async function purchaseUpdate(params: PurchaseUpdateRequest): Promise<void> {
   const pool = await getPool();
+
+  // Recalculate total price automatically (BR-008)
+  const totalPrice = Number((params.quantity * params.unitPrice).toFixed(2));
+
   await pool
     .request()
     .input('id', params.id)
     .input('idAccount', params.idAccount)
     .input('name', params.name)
-    .input('price', params.price)
+    .input('quantity', params.quantity)
+    .input('unitPrice', params.unitPrice)
+    .input('totalPrice', totalPrice)
     .input('purchaseDate', params.purchaseDate)
     .input('category', params.category || null)
     .execute('spPurchaseUpdate');
@@ -59,26 +72,30 @@ export async function purchaseGet(params: {
   return result.recordset[0];
 }
 
-export async function purchaseList(params: { idAccount: number }): Promise<PurchaseEntity[]> {
+export async function purchaseList(params: PurchaseListFilters): Promise<PurchaseEntity[]> {
   const pool = await getPool();
   const result = await pool
     .request()
     .input('idAccount', params.idAccount)
+    .input('searchTerm', params.searchTerm || null)
+    .input('startDate', params.startDate || null)
+    .input('endDate', params.endDate || null)
+    .input('category', params.category || null)
     .execute('spPurchaseList');
 
   return result.recordset;
 }
 
-export async function purchaseGetMonthlyTotal(
-  params: MonthlyTotalRequest
-): Promise<{ total: number }> {
+export async function purchaseGetTotal(params: PurchaseTotalRequest): Promise<{ total: number }> {
   const pool = await getPool();
   const result = await pool
     .request()
     .input('idAccount', params.idAccount)
-    .input('month', params.month)
-    .input('year', params.year)
-    .execute('spPurchaseGetMonthlyTotal');
+    .input('searchTerm', params.searchTerm || null)
+    .input('startDate', params.startDate || null)
+    .input('endDate', params.endDate || null)
+    .input('category', params.category || null)
+    .execute('spPurchaseGetTotal');
 
   return result.recordset[0];
 }

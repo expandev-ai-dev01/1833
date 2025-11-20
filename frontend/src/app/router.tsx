@@ -9,8 +9,9 @@ import { ErrorBoundary } from '@/core/components/ErrorBoundary';
 const HomePage = lazy(() => import('@/pages/Home'));
 const NotFoundPage = lazy(() => import('@/pages/NotFound'));
 
-// Placeholder for future Purchase pages
-// const PurchaseListPage = lazy(() => import('@/pages/Purchase/List'));
+// Purchase pages
+const PurchaseListPage = lazy(() => import('@/pages/Purchase/List'));
+const PurchaseFormPage = lazy(() => import('@/pages/Purchase/Form'));
 
 /**
  * @router router
@@ -46,15 +47,38 @@ export const router = createBrowserRouter([
               <div className="p-4">
                 <h2 className="text-2xl font-bold">Dashboard</h2>
                 <p className="text-muted-foreground">Welcome to FoodTrack Dashboard</p>
-                {/* Dashboard widgets will go here */}
               </div>
             ),
           },
-          // Purchase routes will be added here
-          // {
-          //   path: 'purchases',
-          //   element: <PurchaseListPage />
-          // }
+          {
+            path: 'purchases',
+            children: [
+              {
+                index: true,
+                element: (
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PurchaseListPage />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'new',
+                element: (
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PurchaseFormPage />
+                  </Suspense>
+                ),
+              },
+              {
+                path: ':id/edit',
+                element: (
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PurchaseFormPage />
+                  </Suspense>
+                ),
+              },
+            ],
+          },
         ],
       },
       {
